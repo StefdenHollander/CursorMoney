@@ -1,0 +1,69 @@
+{
+    "achievements": [
+        {
+            "id": 1,
+            "name": "Eerste Stap",
+            "description": "Voeg je eerste activiteit toe",
+            "condition": "first_activity"
+        },
+        {
+            "id": 2,
+            "name": "Week Warrior",
+            "description": "Voltooi 5 activiteiten in één week",
+            "condition": "weekly_activities",
+            "threshold": 5
+        },
+        {
+            "id": 3,
+            "name": "Maandelijkse Meester",
+            "description": "Voltooi 20 activiteiten in één maand",
+            "condition": "monthly_activities",
+            "threshold": 20
+        }
+    ],
+    "default_categories": [
+        {
+            "id": 1,
+            "name": "Hardlopen",
+            "icon": "running"
+        },
+        {
+            "id": 2,
+            "name": "Fietsen",
+            "icon": "biking"
+        },
+        {
+            "id": 3,
+            "name": "Zwemmen",
+            "icon": "swimming"
+        },
+        {
+            "id": 4,
+            "name": "Gym",
+            "icon": "dumbbell"
+        }
+    ],
+    "goals": [
+        {
+            "id": 1,
+            "name": "Beginner",
+            "description": "Start je fitness reis",
+            "target_activities": 5,
+            "target_duration": 150
+        },
+        {
+            "id": 2,
+            "name": "Gevorderde",
+            "description": "Verhoog je activiteit",
+            "target_activities": 15,
+            "target_duration": 450
+        },
+        {
+            "id": 3,
+            "name": "Expert",
+            "description": "Bereik je fitness doelen",
+            "target_activities": 30,
+            "target_duration": 900
+        }
+    ]
+} 

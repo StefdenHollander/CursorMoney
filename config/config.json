@@ -1,0 +1,27 @@
+{
+    "app": {
+        "name": "SportsTracker",
+        "version": "1.0.0",
+        "language": "nl"
+    },
+    "database": {
+        "host": "localhost",
+        "name": "sports_tracker",
+        "user": "root",
+        "password": ""
+    },
+    "premium": {
+        "price": 4.99,
+        "currency": "EUR",
+        "free_limit": 5
+    },
+    "activities": {
+        "types": {
+            "running": "Hardlopen",
+            "cycling": "Fietsen",
+            "swimming": "Zwemmen",
+            "gym": "Gym",
+            "other": "Anders"
+        }
+    }
+} 
