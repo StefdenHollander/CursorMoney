@@ -1,16 +1,17 @@
 <?php
+$user = get_user($_SESSION['user_id']);
 $activities = get_user_activities($_SESSION['user_id']);
 $is_premium = is_premium_user($_SESSION['user_id']);
 ?>
 
 <div class="dashboard">
-    <h2>Welkom, <?php echo htmlspecialchars($_SESSION['username']); ?>!</h2>
+    <h2>Welkom, <?php echo htmlspecialchars($user['username']); ?>!</h2>
     
     <?php if (!$is_premium): ?>
         <div class="premium-banner">
             <h3>Upgrade naar Premium</h3>
             <p>Krijg toegang tot alle functies en onbeperkte activiteiten!</p>
-            <a href="index.php?page=premium" class="btn btn-premium">Nu Upgraden</a>
+            <a href="premium.php" class="btn btn-premium">Nu Upgraden</a>
         </div>
     <?php endif; ?>
     
@@ -51,6 +52,6 @@ $is_premium = is_premium_user($_SESSION['user_id']);
             </div>
         <?php endif; ?>
         
-        <a href="index.php?page=add_activity" class="btn btn-primary">Nieuwe Activiteit</a>
+        <a href="add_activity.php" class="btn btn-primary">Nieuwe Activiteit</a>
     </div>
 </div> 
