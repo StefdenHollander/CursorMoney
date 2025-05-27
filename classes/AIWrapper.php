@@ -1,4 +1,7 @@
 <?php
+require_once 'Recipe.php';
+require_once 'RecipeFormatter.php';
+
 class AIWrapper
 {
     private $ingredients = [];
@@ -6,6 +9,7 @@ class AIWrapper
     private $apiKey;
     private $model;
     private $apiUrl = 'https://api.openai.com/v1/chat/completions';
+    private $formatter;
 
     public function __construct($apiKey = null, $model = 'gpt-3.5-turbo') {
         if (!defined('API_KEY') && $apiKey === null) {
@@ -15,6 +19,7 @@ class AIWrapper
             $this->apiKey = $apiKey;
         }
         $this->model = $model;
+        $this->formatter = new RecipeFormatter();
     }
 
     public function processInput($ingredients)
@@ -35,12 +40,73 @@ class AIWrapper
         return $this->response;
     }
 
-    public function makeApiRequest($prompt)
+    public function generateRecipe($ingredients)
+    {
+        if (!is_array($ingredients)) {
+            throw new Exception('Ingrediënten moeten als array worden doorgegeven');
+        }
+        if (count($ingredients) === 0) {
+            throw new Exception('Geef minimaal één ingrediënt op');
+        }
+
+        $ingredientsList = implode(', ', $ingredients);
+        $prompt = <<<EOT
+        Genereer een duidelijk en gedetailleerd recept met de volgende ingrediënten: $ingredientsList.
+        Retourneer ALLEEN een JSON object met de volgende structuur:
+        {
+            "naam": "[receptnaam]",
+            "ingrediënten": [
+                {
+                    "naam": "[ingredient naam]",
+                    "hoeveelheid": "[hoeveelheid met eenheid, bijv. '200 gram' of '2 eetlepels']"
+                }
+            ],
+            "bereidingstijd": "[totale tijd in minuten]",
+            "stappen": [
+                {
+                    "beschrijving": "[duidelijke stap beschrijving met specifieke details]",
+                    "tijd": "[tijd voor deze stap in minuten]",
+                    "tips": "[optionele tips voor deze stap, zoals 'niet te lang koken' of 'goed roeren']"
+                }
+            ],
+            "moeilijkheidsgraad": "[makkelijk/gemiddeld/moeilijk]",
+            "tips": [
+                "[algemene tip 1]",
+                "[algemene tip 2]"
+            ],
+            "benodigdheden": [
+                "[keukengerei 1]",
+                "[keukengerei 2]"
+            ]
+        }
+        
+        Zorg ervoor dat:
+        1. Alle ingrediënten een duidelijke hoeveelheid hebben
+        2. Elke stap een geschatte tijd heeft
+        3. De totale bereidingstijd de som is van alle stappen
+        4. Elke stap is duidelijk beschreven met specifieke details
+        5. Voeg nuttige tips toe voor elke stap waar nodig
+        6. Vermeld alle benodigde keukengerei
+        7. Geef algemene tips voor het beste resultaat
+        8. Beschrijf de stappen alsof je het uitlegt aan een beginnende kok
+        EOT;
+
+        $rawOutput = $this->makeApiRequest($prompt);
+        $recipe = $this->formatter->formatRecipe($rawOutput);
+        
+        if (!$recipe) {
+            throw new Exception('Kon het recept niet correct verwerken');
+        }
+        
+        return $recipe;
+    }
+
+    private function makeApiRequest($prompt)
     {
         $data = [
             'model' => $this->model,
             'messages' => [
-                ['role' => 'system', 'content' => 'Je bent een expert chef.'],
+                ['role' => 'system', 'content' => 'Je bent een ervaren chef-kok die duidelijke en gedetailleerde recepten geeft, speciaal gericht op beginnende koks. Je geeft altijd specifieke details en nuttige tips.'],
                 ['role' => 'user', 'content' => $prompt]
             ],
             'temperature' => 0.7
@@ -57,48 +123,21 @@ class AIWrapper
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
         if (curl_errno($ch)) {
             throw new Exception('cURL error: ' . curl_error($ch));
         }
         curl_close($ch);
-        return $this->handleResponse($response, $httpCode);
-    }
-
-    private function handleResponse($response, $httpCode)
-    {
+        
         if ($httpCode !== 200) {
-            $error = json_decode($response, true);
-            $message = isset($error['error']['message']) ? $error['error']['message'] : 'Onbekende API fout';
-            throw new Exception('API error (Code ' . $httpCode . '): ' . $message);
+            throw new Exception('API error (Code ' . $httpCode . ')');
         }
-        $decoded = json_decode($response, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('JSON decode error: ' . json_last_error_msg());
-        }
-        if (!isset($decoded['choices'][0]['message']['content'])) {
+        
+        $result = json_decode($response, true);
+        if (!isset($result['choices'][0]['message']['content'])) {
             throw new Exception('Onverwachte API response structuur');
         }
-        return $decoded['choices'][0]['message']['content'];
-    }
-
-    public function generateRecipe($ingredients)
-    {
-        if (!is_array($ingredients)) {
-            throw new Exception('Ingrediënten moeten als array worden doorgegeven');
-        }
-        if (count($ingredients) === 0) {
-            throw new Exception('Geef minimaal één ingrediënt op');
-        }
-        $ingredientsList = implode(', ', $ingredients);
-        $prompt = <<<EOT
-        Genereer een recept met de volgende ingrediënten: $ingredientsList.
-        Het recept moet de volgende onderdelen bevatten:
-        1. Een creatieve naam voor het gerecht
-        2. Een lijst met alle benodigde ingrediënten met hoeveelheden
-        3. Stap-voor-stap bereidingswijze
-        4. Geschatte bereidingstijd
-        5. Aantal personen
-        EOT;
-        return $this->makeApiRequest($prompt);
+        
+        return $result['choices'][0]['message']['content'];
     }
 }

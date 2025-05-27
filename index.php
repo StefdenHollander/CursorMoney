@@ -1,16 +1,25 @@
+<?php
+require_once 'config.php';
+require_once 'classes/AIWrapper.php';
+require_once 'classes/Recipe.php';
+require_once 'classes/RecipeFormatter.php';
+
+$recipe = null;
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ingredients'])) {
+    try {
+        $ingredients = explode(',', $_POST['ingredients']);
+        $ingredients = array_map('trim', $ingredients);
+        $wrapper = new AIWrapper(OPENAI_API_KEY);
+        $recipe = $wrapper->generateRecipe($ingredients);
+    } catch (Exception $e) {
+        $error = "Error: " . $e->getMessage();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="nl">
-    <?php
-require_once 'config.php';
-require_once 'AIWrapper.php';
-$recipe = '';
-$error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ingredients'])) {
-try {
-$ingredients = explode(',', $_POST['ingredients']);
-$ingredients = array_map('trim', $ingredients);
-$wrapper = new AIWrapper(OPENAI_API_KEY);
-$recipe = $wrapper->generateRecipe($ingredients); } catch (Exception $e) { $error = "Error: " . $e->getMessage(); } } ?>
     <head>
         <title>AI Recept Generator</title>
         <style>
@@ -67,19 +76,82 @@ $recipe = $wrapper->generateRecipe($ingredients); } catch (Exception $e) { $erro
             button:hover {
                 background-color: #0056b3;
             }
-            .recipe {
+            .recipe-card {
                 margin-top: 20px;
                 padding: 20px;
                 background-color: #f8f9fa;
-                border-radius: 4px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
-            .recipe h2 {
+            .recipe-card h2 {
                 color: #333;
                 margin-top: 0;
+                border-bottom: 2px solid #007bff;
+                padding-bottom: 10px;
             }
-            pre {
-                white-space: pre-wrap;
-                word-wrap: break-word;
+            .recipe-details {
+                display: flex;
+                gap: 20px;
+                margin: 15px 0;
+                padding: 10px;
+                background-color: #fff;
+                border-radius: 4px;
+            }
+            .recipe-details p {
+                margin: 0;
+            }
+            .recipe-card h3 {
+                color: #444;
+                margin: 20px 0 10px;
+            }
+            .recipe-card ul, .recipe-card ol {
+                margin: 0;
+                padding-left: 20px;
+            }
+            .recipe-card li {
+                margin-bottom: 8px;
+            }
+            .step-time {
+                color: #666;
+                font-size: 0.9em;
+                font-style: italic;
+                margin-left: 5px;
+            }
+            .ingredient-quantity {
+                font-weight: bold;
+                color: #007bff;
+            }
+            .step-tip {
+                margin-top: 5px;
+                padding: 8px;
+                background-color: #fff3cd;
+                border-left: 4px solid #ffc107;
+                border-radius: 4px;
+                font-size: 0.9em;
+                color: #856404;
+            }
+            .recipe-tips {
+                margin-top: 20px;
+                padding: 15px;
+                background-color: #e8f4f8;
+                border-radius: 8px;
+            }
+            .recipe-tips h3 {
+                color: #0056b3;
+                margin-top: 0;
+            }
+            .equipment-list {
+                list-style-type: none;
+                padding-left: 0;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 10px;
+            }
+            .equipment-list li {
+                padding: 8px;
+                background-color: #f8f9fa;
+                border-radius: 4px;
+                border: 1px solid #dee2e6;
             }
         </style>
     </head>
@@ -95,10 +167,68 @@ $recipe = $wrapper->generateRecipe($ingredients); } catch (Exception $e) { $erro
                 <textarea id="ingredients" name="ingredients" rows="3" required><?php echo isset($_POST['ingredients']) ? htmlspecialchars($_POST['ingredients']) : ''; ?></textarea>
                 <button type="submit">Genereer Recept</button>
             </form>
-            <?php if ($recipe): ?>
-            <div class="recipe">
-                <h2>Gegenereerd Recept</h2>
-                <pre><?php echo htmlspecialchars($recipe); ?></pre>
+            <?php if ($recipe instanceof Recipe): ?>
+            <div class="recipe-card">
+                <h2><?php echo htmlspecialchars($recipe->naam); ?></h2>
+                <div class="recipe-details">
+                    <p><strong>Bereidingstijd:</strong> <?php echo htmlspecialchars($recipe->bereidingstijd); ?></p>
+                    <p><strong>Moeilijkheidsgraad:</strong> <?php echo htmlspecialchars($recipe->moeilijkheidsgraad); ?></p>
+                </div>
+
+                <?php if (!empty($recipe->benodigdheden)): ?>
+                <h3>Benodigdheden:</h3>
+                <ul class="equipment-list">
+                    <?php foreach ($recipe->benodigdheden as $item): ?>
+                        <li><?php echo htmlspecialchars($item); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
+
+                <h3>Ingrediënten:</h3>
+                <ul>
+                    <?php foreach ($recipe->ingrediënten as $ingredient): ?>
+                        <li>
+                            <?php 
+                            if (is_array($ingredient) && isset($ingredient['naam']) && isset($ingredient['hoeveelheid'])) {
+                                echo '<span class="ingredient-quantity">' . htmlspecialchars($ingredient['hoeveelheid']) . '</span> ' . 
+                                     htmlspecialchars($ingredient['naam']);
+                            } else {
+                                echo htmlspecialchars($ingredient);
+                            }
+                            ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+
+                <h3>Bereidingswijze:</h3>
+                <ol>
+                    <?php foreach ($recipe->stappen as $stap): ?>
+                        <li>
+                            <?php 
+                            if (is_array($stap) && isset($stap['beschrijving']) && isset($stap['tijd'])) {
+                                echo htmlspecialchars($stap['beschrijving']);
+                                echo ' <span class="step-time">(' . htmlspecialchars($stap['tijd']) . ' min)</span>';
+                                if (isset($stap['tips']) && !empty($stap['tips'])) {
+                                    echo '<div class="step-tip">💡 Tip: ' . htmlspecialchars($stap['tips']) . '</div>';
+                                }
+                            } else {
+                                echo htmlspecialchars($stap);
+                            }
+                            ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+
+                <?php if (!empty($recipe->tips)): ?>
+                <div class="recipe-tips">
+                    <h3>Tips voor het beste resultaat:</h3>
+                    <ul>
+                        <?php foreach ($recipe->tips as $tip): ?>
+                            <li><?php echo htmlspecialchars($tip); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
