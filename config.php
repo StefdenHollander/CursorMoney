@@ -1,0 +1,6 @@
+<?php
+// OpenAI API Configuration
+define('OPENAI_API_KEY', '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'); // Replace with your actual OpenAI API key
+
+// Other configuration settings can be added here
+?> 

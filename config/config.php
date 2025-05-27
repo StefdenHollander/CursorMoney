@@ -1,5 +1,5 @@
 <?php 
-define('API_KEY', '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
+define('API_KEY', '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
 '); 
 
 
