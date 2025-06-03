@@ -1,28 +1,58 @@
 <?php
 
 class RecipeFormatter {
-    public function formatRecipe(string $rawOutput): ?Recipe {
+    public function formatRecipe($rawOutput) {
         try {
-            // Probeer de output te decoderen als JSON
             $data = json_decode($rawOutput, true);
             
-            // Controleer of de benodigde velden aanwezig zijn
-            if (!$data || !isset($data['naam']) || !isset($data['ingrediënten']) ||
-                !isset($data['bereidingstijd']) || !isset($data['stappen']) ||
-                !isset($data['moeilijkheidsgraad'])) {
-                return $this->tryExtractRecipe($rawOutput);
+            if (!$data || !isset($data['naam']) || !isset($data['ingrediënten'])) {
+                throw new Exception('Ongeldige recept data');
             }
 
-            // Maak een nieuw Recipe object
+            // Verwerk de ingrediënten
+            $ingrediënten = [];
+            foreach ($data['ingrediënten'] as $ingredient) {
+                if (is_array($ingredient) && isset($ingredient['naam']) && isset($ingredient['hoeveelheid'])) {
+                    $ingrediënten[] = [
+                        'naam' => $ingredient['naam'],
+                        'hoeveelheid' => $ingredient['hoeveelheid'],
+                        'prijs' => isset($ingredient['prijs']) ? (float)str_replace(['€', ' '], '', $ingredient['prijs']) : 0
+                    ];
+                } else {
+                    $ingrediënten[] = $ingredient;
+                }
+            }
+
+            // Verwerk de stappen
+            $stappen = [];
+            foreach ($data['stappen'] as $stap) {
+                if (is_array($stap) && isset($stap['beschrijving'])) {
+                    $stappen[] = [
+                        'beschrijving' => $stap['beschrijving'],
+                        'tijd' => $stap['tijd'] ?? '',
+                        'tips' => $stap['tips'] ?? ''
+                    ];
+                } else {
+                    $stappen[] = $stap;
+                }
+            }
+
+            // Haal de totaalprijs uit de data
+            $totaalPrijs = isset($data['totaalPrijs']) ? (float)str_replace(['€', ' '], '', $data['totaalPrijs']) : 0;
+
             return new Recipe(
                 $data['naam'],
-                $data['ingrediënten'],
+                $ingrediënten,
                 $data['bereidingstijd'],
-                $data['stappen'],
-                $data['moeilijkheidsgraad']
+                $stappen,
+                $data['moeilijkheidsgraad'],
+                $data['tips'] ?? [],
+                $data['benodigdheden'] ?? [],
+                $totaalPrijs
             );
         } catch (Exception $e) {
-            return $this->tryExtractRecipe($rawOutput);
+            error_log('Error formatting recipe: ' . $e->getMessage());
+            return null;
         }
     }
 

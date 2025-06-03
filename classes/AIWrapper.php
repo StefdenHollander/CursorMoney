@@ -65,13 +65,21 @@ class AIWrapper
         - Rond de hoeveelheden af naar realistische getallen (bijv. 1.5kg in plaats van 1.47kg)
         - Gebruik logische eenheden (kg voor grote hoeveelheden, g voor kleinere)
         
+        Voor elk ingredient, geef een realistische prijs in euro's (€) gebaseerd op de huidige gemiddelde supermarktprijzen in Nederland.
+        Bijvoorbeeld:
+        - 1kg kipfilet: €8.99
+        - 1kg rijst: €1.99
+        - 1kg tomaten: €2.99
+        - 1kg kaas: €9.99
+        
         Retourneer ALLEEN een JSON object met de volgende structuur:
         {
             "naam": "[receptnaam]",
             "ingrediënten": [
                 {
                     "naam": "[ingredient naam]",
-                    "hoeveelheid": "[hoeveelheid met eenheid, aangepast voor $aantalPersonen personen]"
+                    "hoeveelheid": "[hoeveelheid met eenheid, aangepast voor $aantalPersonen personen]",
+                    "prijs": "[prijs in euro's voor de gegeven hoeveelheid]"
                 }
             ],
             "bereidingstijd": "[totale tijd in minuten]",
@@ -90,7 +98,8 @@ class AIWrapper
             "benodigdheden": [
                 "[keukengerei 1]",
                 "[keukengerei 2]"
-            ]
+            ],
+            "totaalPrijs": "[totale prijs van alle ingrediënten in euro's]"
         }
         
         Zorg ervoor dat:
@@ -102,6 +111,8 @@ class AIWrapper
         6. Vermeld alle benodigde keukengerei
         7. Geef algemene tips voor het beste resultaat
         8. Beschrijf de stappen alsof je het uitlegt aan een beginnende kok
+        9. Geef realistische prijzen voor elk ingredient, gebaseerd op de huidige supermarktprijzen
+        10. Bereken de totaalprijs van alle ingrediënten
         EOT;
 
         $rawOutput = $this->makeApiRequest($prompt);

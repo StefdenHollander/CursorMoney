@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ingredients'])) {
         $ingredients = explode(',', $_POST['ingredients']);
         $ingredients = array_map('trim', $ingredients);
         $aantalPersonen = isset($_POST['aantal_personen']) ? (int)$_POST['aantal_personen'] : 4;
+        
         $wrapper = new AIWrapper(OPENAI_API_KEY);
         $recipe = $wrapper->generateRecipe($ingredients, $aantalPersonen);
     } catch (Exception $e) {
@@ -163,6 +164,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ingredients'])) {
                 border-radius: 4px;
                 border: 1px solid #dee2e6;
             }
+            .ingredient-row {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 5px;
+                align-items: center;
+            }
+            .ingredient-row input[type="text"] {
+                flex: 1;
+            }
+            .ingredient-row input[type="number"] {
+                width: 100px;
+            }
+            .price-info {
+                color: #28a745;
+                font-weight: bold;
+            }
+            .total-price {
+                margin-top: 20px;
+                padding: 15px;
+                background-color: #e8f4f8;
+                border-radius: 8px;
+                font-size: 1.2em;
+            }
+            .price-details {
+                margin-top: 10px;
+                font-size: 0.9em;
+                color: #666;
+            }
         </style>
     </head>
 
@@ -208,6 +237,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ingredients'])) {
                             if (is_array($ingredient) && isset($ingredient['naam']) && isset($ingredient['hoeveelheid'])) {
                                 echo '<span class="ingredient-quantity">' . htmlspecialchars($ingredient['hoeveelheid']) . '</span> ' . 
                                      htmlspecialchars($ingredient['naam']);
+                                if (isset($ingredient['prijs']) && $ingredient['prijs'] > 0) {
+                                    echo ' <span class="price-info">(€' . number_format($ingredient['prijs'], 2) . ')</span>';
+                                }
                             } else {
                                 echo htmlspecialchars($ingredient);
                             }
@@ -215,6 +247,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ingredients'])) {
                         </li>
                     <?php endforeach; ?>
                 </ul>
+
+                <?php if ($recipe->totaalPrijs > 0): ?>
+                <div class="total-price">
+                    <strong>Totaalprijs: €<?php echo number_format($recipe->totaalPrijs, 2); ?></strong>
+                    <br>
+                    <small>Prijs per persoon: €<?php echo number_format($recipe->totaalPrijs / $aantalPersonen, 2); ?></small>
+                    <div class="price-details">
+                        <small>* Prijzen zijn geschatte gemiddelde prijzen uit de supermarkt</small>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <h3>Bereidingswijze:</h3>
                 <ol>
